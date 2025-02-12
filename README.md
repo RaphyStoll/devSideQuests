@@ -38,7 +38,8 @@ Bien que la communauté et le Discord (à venir) soient là pour partager, s'ent
 
 ## 📜 Quêtes Disponibles
 
-### [DSQ #1 - Mini Weather Dashboard](https://github.com/RaphyStoll/miniWeather) [Status](img/Badge%20de%20statut%20en%20cours.svg)
+### [DSQ #1 - Mini Weather Dashboard](https://github.com/RaphyStoll/miniWeather)
+![Status](img/Badge%20de%20statut%20en%20cours.svg)
 - **Niveau**: Débutant
 - **Temps Max**: 3 jours
 - **Classes Suggérées**: Python, JavaScript, Java
