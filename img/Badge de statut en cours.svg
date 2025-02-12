@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="30">
+  <!-- Fond du badge -->
+  <rect width="120" height="30" rx="15" fill="#2B3137"/>
+  
+  <!-- Texte "En cours" -->
+  <text x="45" y="20" font-family="Arial" font-size="14" fill="white">En cours</text>
+  
+  <!-- Points animés -->
+  <circle cx="90" cy="15" r="3" fill="white">
+    <animate attributeName="opacity"
+             values="1;0.2;1"
+             dur="1.5s"
+             repeatCount="indefinite"
+             begin="0s"/>
+  </circle>
+  
+  <circle cx="100" cy="15" r="3" fill="white">
+    <animate attributeName="opacity"
+             values="1;0.2;1"
+             dur="1.5s"
+             repeatCount="indefinite"
+             begin="0.5s"/>
+  </circle>
+  
+  <circle cx="110" cy="15" r="3" fill="white">
+    <animate attributeName="opacity"
+             values="1;0.2;1"
+             dur="1.5s"
+             repeatCount="indefinite"
+             begin="1s"/>
+  </circle>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="30">
+  <!-- Fond du badge -->
+  <rect width="120" height="30" rx="15" fill="#238636"/>
+  
+  <!-- Texte "Terminé" -->
+  <text x="35" y="20" font-family="Arial" font-size="14" fill="white">Terminé</text>
+  
+  <!-- Check mark -->
+  <path d="M95 8 L102 15 L115 5" stroke="white" stroke-width="3" fill="none">
+    <animate attributeName="stroke-dasharray"
+             values="0,50;50,0"
+             dur="0.5s"
+             fill="freeze"/>
+  </path>
+</svg>
