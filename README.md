@@ -9,7 +9,7 @@ votre arsenal de développeur.
 
 ## 🎯 Concept
 
-- **Durée de quête**: 2 à 4 jours (8h/jour)
+- **Durée de la quête**: 2 à 4 jours (8h/jour)
 - **Type de missions**: Applications graphiques
 - **Difficulté**: De Débutant à Expert
 - **Language/Framework**: Libre le but est de découvrir
