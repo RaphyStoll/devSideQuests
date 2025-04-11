@@ -232,25 +232,25 @@ def get_forks():
 
 
 def count_active_quests():
-    """Détermine le nombre de quêtes actives en cherchant les repos avec le topic approprié"""
+    """Détermine le nombre de quêtes actives en comptant les fichiers .md dans le répertoire quests"""
     try:
-        # Rechercher tous les repos avec le topic "devsidequests"
-        dsq_repos = g.search_repositories("topic:devsidequests")
+        repo = g.get_repo(f"{REPO_OWNER}/{REPO_NAME}")
+        quests_files = []
 
-        # Récupérer les topics de chaque repo pour trouver les quêtes distinctes
-        quest_topics = set()
+        # Récupérer les fichiers .md dans le répertoire quests
+        try:
+            quests_dir_contents = repo.get_contents("quests")
+            for content in quests_dir_contents:
+                if content.name.endswith(".md"):
+                    quests_files.append(content)
 
-        for repo in dsq_repos:
-            topics = repo.get_topics()
-            for topic in topics:
-                if topic.startswith("dsq") and topic != "devsidequests":
-                    quest_topics.add(topic)
+            # Retourner le nombre de fichiers .md trouvés
+            if quests_files:
+                return len(quests_files)
+        except Exception as e:
+            print(f"Erreur lors de l'accès au répertoire quests: {e}")
 
-        # Si on trouve des quêtes via les topics, retourner le nombre
-        if quest_topics:
-            return len(quest_topics)
-
-        # Sinon, retourner une valeur par défaut
+        # Valeur par défaut en cas d'erreur ou si aucun fichier n'est trouvé
         return 1
     except Exception as e:
         print(f"Erreur lors du comptage des quêtes actives: {e}")
