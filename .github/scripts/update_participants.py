@@ -11,7 +11,6 @@ import sys
 import json
 from datetime import datetime, timedelta
 from github import Github
-from dateutil import parser
 
 # --------------------------------------------------------
 # CONFIGURATION GLOBALE
@@ -118,11 +117,6 @@ def get_or_cache_user(user_login, cache_data, fork_date=None):
     # => dans le dictionnaire Python, on garde un champ datetime
     # => dans le cache JSON, on garde la chaîne iso
     fd_str = user_info["fork_date"]
-    if isinstance(fd_str, str):
-        user_info["fork_date_dt"] = datetime.fromisoformat(fd_str)
-    else:
-        # si c’est déjà un datetime (peu probable), on le garde
-        user_info["fork_date_dt"] = fd_str
 
     return user_info
 
@@ -326,8 +320,11 @@ def get_completed_quests(fork_data):
                         if quest_id not in quest_completion_times:
                             quest_completion_times[quest_id] = []
                         quest_completion_times[quest_id].append(days_diff)
-            except:
-                pass  # repos privé ou autre cas
+            except Exception as e:
+                print(
+                    f"Skipping repo {repo_name} for user {username} due to error: {e}"
+                )
+                continue
 
     # On calcule la moyenne de complétion pour chaque quête
     average_times = {}
@@ -365,13 +362,8 @@ def generate_markdown(fork_data):
     """
     Gère la construction de PARTICIPANTS.md (sans la "Galerie des Quêtes").
     """
-    # Convertir la date iso en datetime pour trier
-    for user in fork_data:
-        if isinstance(user["fork_date"], str):
-            user["fork_date"] = datetime.fromisoformat(user["fork_date"])
-
     # Tri final du plus récent au plus ancien
-    fork_data.sort(key=lambda x: x["fork_date_dt"], reverse=True)
+    fork_data.sort(key=lambda x: datetime.fromisoformat(x["fork_date"]), reverse=True)
 
     participants_count = len(fork_data)
     projects_count = count_completed_projects(fork_data)
@@ -507,7 +499,7 @@ votre-projet-dsq/
 
     # Ajouter les 5 derniers arrivés
     for user in fork_data[:5]:
-        date_formatted = user["fork_date_dt"].strftime("%d/%m/%Y")
+        date_formatted = datetime.fromisoformat(user["fork_date"]).strftime("%d/%m/%Y")
         repo_link = ""
         if user["dsq_repos"]:
             main_repo = user["dsq_repos"][0]
@@ -548,28 +540,18 @@ votre-projet-dsq/
     if participants_count > 30:
         markdown += f"\n_Et plus de {participants_count - 30} autres aventuriers..._\n"
 
-    # Ajouter la section galerie des quêtes
+    # Ajouter la section footer
     markdown += """
-
-## 🔍 Explorer plus de projets
-
-Découvrez les projets DSQ en explorant ces GitHub Topics :
-
-<div align="center">
-  
-[🌐 Tous les projets DSQ](https://github.com/topics/devsidequests)
-
-</div>
-
----
-
-<div align="center">
-  
-*Cette page est générée automatiquement par un workflow GitHub Actions.*  
-*Dernière mise à jour : {datetime.now().strftime('%d/%m/%Y à %H:%M')}*
-
-</div>
-"""
+    
+    ---
+    
+    <div align="center">
+      
+    *Cette page est générée automatiquement par un workflow GitHub Actions.*  
+    *Dernière mise à jour : {datetime.now().strftime('%d/%m/%Y à %H:%M')}*
+    
+    </div>
+    """
     return markdown
 
 
