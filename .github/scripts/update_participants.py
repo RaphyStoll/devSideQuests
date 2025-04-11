@@ -129,11 +129,6 @@ def get_or_cache_user(user_login, cache_data, fork_date=None):
 
 
 def determine_main_language(user_login):
-    """
-    Détermine le langage principal d'un utilisateur en scrutant ses repos publics,
-    ou renvoie 'Aucune' s'il n'y a pas assez d'infos.
-    Simplifié : on ajoute un poids plus fort aux repos récents et non-forkés.
-    """
     try:
         user_obj = g.get_user(user_login)
         repos = list(user_obj.get_repos())
@@ -144,16 +139,21 @@ def determine_main_language(user_login):
         from collections import Counter
 
         languages = []
-        repo_tz = repo.updated_at.tzinfo
-        six_months_ago = datetime.now(tz=repo_tz) - timedelta(days=180)
 
         for repo in repos:
             if repo.language:
                 weight = 1
+
+                # On s'assure d'un offset-aware "six_months_ago"
+                # en prenant la timezone du repo si elle existe :
+                repo_tz = repo.updated_at.tzinfo
+                six_months_ago = datetime.now(tz=repo_tz) - timedelta(days=180)
+
                 if not repo.fork:
                     weight *= 3
                 if repo.updated_at > six_months_ago:
                     weight *= 2
+
                 languages.extend([repo.language] * weight)
 
         if not languages:
@@ -570,47 +570,37 @@ Découvrez les projets DSQ en explorant ces GitHub Topics :
 
 
 def main():
-    """Fonction principale"""
     print("Récupération du cache...")
     cache_data = load_cache()
+
     print("Récupération des forks...")
     fork_data = get_forks(cache_data)
     print(f"Nombre de participants trouvés: {len(fork_data)}")
+
+    print("Participants additionnels...")
     additional_data = get_additional_participants_data(ADDITIONAL_USERNAMES, cache_data)
     print(f"Participants additionnels : {len(additional_data)}")
+
+    # Correction du NameError : renommer 'forks_data' en 'fork_data'
     combined = fork_data + additional_data
     print(f"Nombre total de participants après fusion : {len(combined)}")
-
-    print("Génération des statistiques avancées...")
-    # Les statistiques sont maintenant générées dans la fonction generate_markdown
 
     print("Génération du markdown...")
     markdown_content = generate_markdown(combined)
 
-    print("Écriture dans le fichier PARTICIPANTS.md...")
+    print("Écriture dans PARTICIPANTS.md...")
     with open("PARTICIPANTS.md", "w", encoding="utf-8") as f:
         f.write(markdown_content)
 
-    print("update cache ...")
+    print("Mise à jour du cache...")
     save_cache(cache_data)
-    print("Mise à jour terminée. PARTICIPANTS.md et cache.json sont à jour.")
+    print("Mise à jour terminée.")
 
-    # Afficher un récapitulatif
+    # Récap
     print("\nRécapitulatif:")
-    print(f"- {len(fork_data)} participants")
+    print(f"- {len(fork_data)} participants (via forks)")
     print(f"- {count_completed_projects(fork_data)} projets complétés")
     print(f"- {count_active_quests()} quêtes actives")
-
-    # Suggestions pour des optimisations futures
-    if len(fork_data) > 50:
-        print(
-            "\nSuggestion: Beaucoup de participants détectés, vous pourriez optimiser les appels API GitHub"
-        )
-
-    if count_completed_projects(fork_data) > 100:
-        print(
-            "\nSuggestion: Beaucoup de projets complétés, vous pourriez ajouter un système de filtrage par quête"
-        )
 
 
 if __name__ == "__main__":
