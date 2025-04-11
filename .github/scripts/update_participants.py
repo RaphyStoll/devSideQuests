@@ -570,21 +570,28 @@ Découvrez les projets DSQ en explorant ces GitHub Topics :
 
 def main():
     """Fonction principale"""
+    print("Récupération du cache...")
+    cache_data = load_cache()
     print("Récupération des forks...")
-    fork_data = get_forks()
-
+    fork_data = get_forks(cache_data)
     print(f"Nombre de participants trouvés: {len(fork_data)}")
+    additional_data = get_additional_participants_data(ADDITIONAL_USERNAMES, cache_data)
+    print(f"Participants additionnels : {len(additional_data)}")
+    combined = forks_data + additional_data
+    print(f"Nombre total de participants après fusion : {len(combined)}")
 
     print("Génération des statistiques avancées...")
     # Les statistiques sont maintenant générées dans la fonction generate_markdown
 
     print("Génération du markdown...")
-    markdown_content = generate_markdown(fork_data)
+    markdown_content = generate_markdown(combined)
 
     print("Écriture dans le fichier PARTICIPANTS.md...")
     with open("PARTICIPANTS.md", "w", encoding="utf-8") as f:
         f.write(markdown_content)
 
+    print("update cache ...")
+    save_cache(cache_data)
     print("Mise à jour terminée avec succès!")
 
     # Afficher un récapitulatif
