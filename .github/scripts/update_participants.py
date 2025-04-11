@@ -3,411 +3,388 @@
 
 """
 Script d'automatisation pour mettre à jour la liste des participants des Dev Side Quests.
-Ce script:
-1. Récupère la liste de tous les forks du repo DSQ
-2. Extrait les informations des utilisateurs
-3. Génère un nouveau fichier PARTICIPANTS.md formaté
+Intégration d'un mécanisme de cache pour éviter les appels répétés à l'API GitHub.
 """
 
 import os
-import requests
+import sys
 import json
 from datetime import datetime, timedelta
 from github import Github
 from dateutil import parser
 
-# Configuration
+# --------------------------------------------------------
+# CONFIGURATION GLOBALE
+# --------------------------------------------------------
 REPO_OWNER = "RaphyStoll"
 REPO_NAME = "devSideQuests"
 
-# Initialisation de l'API GitHub avec le token fourni par les Actions GitHub
-token = os.environ.get("GITHUB_TOKEN")  # ou TOKEN, selon ton choix
+# Fichier de cache
+CACHE_FILE = "cache.json"
+
+# Tableau de noms d'utilisateur à ajouter manuellement
+ADDITIONAL_USERNAMES = [
+    "MonSuperUser",
+    # "AutreAventurier42",
+]
+
+# On récupère le token GitHub
+token = os.environ.get("GITHUB_TOKEN")
 if not token:
-    print("ERREUR: Variable d'environnement TOKEN non définie ou vide")
-    print(
-        "Assurez-vous que le token est correctement configuré dans le workflow GitHub Actions"
-    )
+    print("ERREUR: Variable d'environnement GITHUB_TOKEN non définie ou vide.")
     sys.exit(1)
 
 g = Github(token)
 
+# --------------------------------------------------------
+# GESTION DU CACHE
+# --------------------------------------------------------
+
+
+def load_cache():
+    """Charge le cache depuis le fichier CACHE_FILE,
+    s'il n'existe pas, le crée et renvoie un dict vide."""
+    if not os.path.exists(CACHE_FILE):
+        # On crée un nouveau fichier de cache vide
+        with open(CACHE_FILE, "w", encoding="utf-8") as f:
+            f.write("{}")  # on met simplement un JSON vide
+        return {}
+
+    # Sinon, on lit son contenu
+    with open(CACHE_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_cache(cache_data):
+    """Sauvegarde le cache dans le fichier CACHE_FILE."""
+    with open(CACHE_FILE, "w", encoding="utf-8") as f:
+        json.dump(cache_data, f, ensure_ascii=False, indent=2)
+
+
+# --------------------------------------------------------
+# FONCTIONS POUR RÉCUPÉRER / STOCKER LES INFOS UTILISATEUR
+# --------------------------------------------------------
+
+
+def fetch_user_data(user_login, fork_date=None):
+    """
+    Récupère toutes les infos pour un utilisateur donné (avatar, URL, date "fork"/arrivée,
+    repos DSQ, langage principal) via l'API GitHub, et renvoie un dict.
+    """
+    user_obj = g.get_user(user_login)
+
+    # Si fork_date n'est pas fourni, on prend la date de création de son compte
+    # (utile pour les "ADDITIONAL_USERNAMES" qui n'ont pas forké).
+    if not fork_date:
+        fork_date = user_obj.created_at
+
+    # Récupération des dépôts DSQ
+    dsq_repos = []
+    try:
+        user_repos = g.search_repositories(f"user:{user_login} topic:devsidequests")
+        for r in user_repos:
+            dsq_repos.append(
+                {"name": r.name, "url": r.html_url, "topics": r.get_topics()}
+            )
+    except Exception as e:
+        print(f"Erreur lors de la recherche DSQ pour {user_login}: {e}")
+
+    main_language = determine_main_language(user_login)
+
+    # On stocke la date au format ISO8601 (string) pour plus de facilité au JSON
+    return {
+        "username": user_login,
+        "avatar_url": user_obj.avatar_url,
+        "profile_url": user_obj.html_url,
+        "fork_date": fork_date.isoformat(),
+        "dsq_repos": dsq_repos,
+        "main_language": main_language,
+    }
+
+
+def get_or_cache_user(user_login, cache_data, fork_date=None):
+    """
+    Vérifie si user_login est dans le cache_data.
+    - S'il y est, on retourne ces infos (en remplaçant éventuellement la date de fork).
+    - Sinon, on va les chercher avec fetch_user_data() et on les stocke dans le cache.
+    """
+    # Si déjà en cache, on le récupère
+    if user_login in cache_data:
+        user_info = cache_data[user_login]
+        # On met à jour la date si on en reçoit une (ex. pour un fork)
+        if fork_date is not None:
+            user_info["fork_date"] = fork_date.isoformat()
+        return user_info
+    else:
+        # Sinon, on fetch via l'API GitHub
+        user_info = fetch_user_data(user_login, fork_date)
+        # On le stocke en cache
+        cache_data[user_login] = user_info
+        return user_info
+
+
+# --------------------------------------------------------
+# DÉTERMINATION DU LANGAGE PRINCIPAL
+# --------------------------------------------------------
+
 
 def determine_main_language(user_login):
-    """Détermine le langage principal utilisé par un utilisateur sur l'ensemble de son profil"""
+    """
+    Détermine le langage principal d'un utilisateur en scrutant ses repos publics,
+    ou renvoie 'Aucune' s'il n'y a pas assez d'infos.
+    Simplifié : on ajoute un poids plus fort aux repos récents et non-forkés.
+    """
     try:
         user_obj = g.get_user(user_login)
-
-        # Étape 1: Vérifier si l'utilisateur a un profil WakaTime
-        if user_obj.bio and (
-            "wakatime.com" in user_obj.bio.lower()
-            or "waka time" in user_obj.bio.lower()
-        ):
-            wakatime_lang = extract_wakatime_data(user_obj.bio)
-            if wakatime_lang:
-                return wakatime_lang
-
-        # Étape 2: Récupérer tous les repos publics de l'utilisateur
         repos = list(user_obj.get_repos())
 
-        # Si l'utilisateur n'a pas de repos, vérifier la bio
         if not repos:
-            bio_lang = extract_language_from_bio(user_obj)
-            return bio_lang if bio_lang else "Aucune"
+            return "Aucune"
 
-        # Étape 3: Collecter les langages de tous ses repos
+        from collections import Counter
+
         languages = []
+        six_months_ago = datetime.now() - timedelta(days=180)
+
         for repo in repos:
             if repo.language:
-                # Donner plus de poids aux repos les plus récents (coefficient ×2)
-                # et aux repos non forkés (coefficient ×3)
                 weight = 1
                 if not repo.fork:
                     weight *= 3
-                # Vérifier si le repo a été mis à jour récemment (moins de 6 mois)
-                six_months_ago = datetime.now() - timedelta(days=180)
                 if repo.updated_at > six_months_ago:
                     weight *= 2
-
-                # Ajouter le langage plusieurs fois selon son poids
                 languages.extend([repo.language] * weight)
 
-        # Étape 4: Déterminer le langage le plus fréquent avec pourcentage
-        if languages:
-            from collections import Counter
+        if not languages:
+            return "Aucune"
 
-            counter = Counter(languages)
-            total = sum(counter.values())
-            most_common = counter.most_common(1)[0]
-            language_name = most_common[0]
-            percentage = (most_common[1] / total) * 100
-
-            # Si le pourcentage est supérieur à 15%, ajouter le pourcentage
-            if percentage > 15:
-                return f"{language_name} {int(percentage)}%"
-            return language_name
-
-        # Étape 5: Si aucun langage n'est trouvé, vérifier la bio
-        bio_lang = extract_language_from_bio(user_obj)
-        return bio_lang if bio_lang else "Aucune"
+        counter = Counter(languages)
+        lang, count = counter.most_common(1)[0]
+        total = sum(counter.values())
+        percentage = (count / total) * 100
+        if percentage > 15:
+            return f"{lang} {int(percentage)}%"
+        return lang
 
     except Exception as e:
-        print(f"Erreur lors de la détermination du langage pour {user_login}: {e}")
+        print(f"Erreur determine_main_language({user_login}): {e}")
         return "Aucune"
 
 
-def extract_wakatime_data(bio_text):
-    """Tente d'extraire les données WakaTime de la bio de l'utilisateur"""
-    try:
-        # Rechercher les liens WakaTime dans la bio
-        import re
-
-        wakatime_urls = re.findall(r"https?://wakatime.com/[@\w\d\-\.]+", bio_text)
-
-        if not wakatime_urls:
-            return None
-
-        # Prendre le premier lien trouvé
-        wakatime_url = wakatime_urls[0]
-
-        # Essayer d'accéder à la page WakaTime (peut nécessiter des ajustements)
-        # Note: Cette partie peut être limitée par les restrictions de WakaTime
-        # Pour une implémentation complète, l'API WakaTime serait nécessaire
-
-        # Simulation d'extraction à partir du nom d'utilisateur WakaTime
-        # (en réalité, il faudrait une méthode plus robuste)
-        match = re.search(r"wakatime.com/(@[\w\d\-\.]+)", wakatime_url)
-        if match:
-            username = match.group(1)
-            # Ici, on pourrait utiliser l'API WakaTime si disponible
-            # Pour l'instant, on retourne simplement qu'on a détecté un profil WakaTime
-            return "WakaTime"
-
-        return None
-    except Exception as e:
-        print(f"Erreur lors de l'extraction des données WakaTime: {e}")
-        return None
+# --------------------------------------------------------
+# RÉCUPÉRATION DES DONNÉES : FORKS + PARTICIPANTS ADDITIONNELS
+# --------------------------------------------------------
 
 
-def extract_language_from_bio(user_obj):
-    """Extrait un langage de programmation potentiel de la bio de l'utilisateur"""
-    if not user_obj.bio:
-        return None
-
-    # Liste des langages communs à rechercher dans la bio
-    common_langs = [
-        "Python",
-        "JavaScript",
-        "Java",
-        "C",
-        "C++",
-        "C#",
-        "Go",
-        "Ruby",
-        "PHP",
-        "Swift",
-        "Kotlin",
-        "Rust",
-        "TypeScript",
-        "Scala",
-        "R",
-        "Perl",
-        "Haskell",
-        "Lua",
-        "Shell",
-        "Objective-C",
-        "Assembly",
-    ]
-
-    bio_text = user_obj.bio.lower()
-
-    # Rechercher les mentions explicites comme "I code in X" or "X developer"
-    for lang in common_langs:
-        patterns = [
-            f"{lang.lower()} developer",
-            f"développeur {lang.lower()}",
-            f"code in {lang.lower()}",
-            f"code avec {lang.lower()}",
-            f"programme en {lang.lower()}",
-            f"{lang.lower()} programmer",
-            f"using {lang.lower()}",
-            f"specializing in {lang.lower()}",
-        ]
-
-        if any(pattern in bio_text for pattern in patterns) or lang.lower() in bio_text:
-            return lang
-
-    # Si aucun langage n'est trouvé avec les patterns
-    for lang in common_langs:
-        if lang.lower() in bio_text:
-            return lang
-
-    return None
-
-
-def get_forks():
-    """Récupère tous les forks du repo principal"""
+def get_forks(cache_data):
+    """
+    Récupère la liste des forks du repo principal,
+    utilise le cache pour chaque user,
+    et retourne une liste de dict participants.
+    """
     repo = g.get_repo(f"{REPO_OWNER}/{REPO_NAME}")
     forks = repo.get_forks()
 
-    fork_data = []
+    participants = []
     for fork in forks:
-        # Récupère la date de création du fork
-        created_at = fork.created_at
+        user_login = fork.owner.login
+        fork_date = fork.created_at
+        # On récupère l'utilisateur depuis le cache ou via l'API
+        user_data = get_or_cache_user(user_login, cache_data, fork_date)
+        participants.append(user_data)
 
-        # Récupère les informations de l'utilisateur
-        user = fork.owner
+    # On ne convertit pas encore la date en datetime,
+    # mais on va le faire plus tard, avant le tri final.
+    return participants
 
-        # Recherche les repos DSQ de l'utilisateur avec les topics appropriés
-        dsq_repos = []
-        try:
-            user_repos = g.search_repositories(f"user:{user.login} topic:devsidequests")
-            for repo in user_repos:
-                dsq_repos.append(
-                    {
-                        "name": repo.name,
-                        "url": repo.html_url,
-                        "topics": repo.get_topics(),
-                    }
-                )
-        except Exception as e:
-            print(f"Erreur lors de la recherche des repos pour {user.login}: {e}")
 
-        # Déterminer la principale technologie utilisée
-        main_language = determine_main_language(user.login)
+def get_additional_participants_data(usernames_list, cache_data):
+    """
+    Pour chaque username additionnel, on récupère les infos
+    via le cache ou l'API GitHub.
+    On renvoie une liste (même format que get_forks).
+    """
+    participants_data = []
+    for username in usernames_list:
+        user_data = get_or_cache_user(username, cache_data, None)
+        participants_data.append(user_data)
+    return participants_data
 
-        fork_data.append(
-            {
-                "username": user.login,
-                "avatar_url": user.avatar_url,
-                "profile_url": user.html_url,
-                "fork_date": created_at,
-                "dsq_repos": dsq_repos,
-                "main_language": main_language,
-            }
-        )
 
-    # Trier par date de fork (plus récent en premier)
-    fork_data.sort(key=lambda x: x["fork_date"], reverse=True)
-    return fork_data
+# --------------------------------------------------------
+# STATISTIQUES : QUÊTES ACTIVES, PROJETS COMPLÉTÉS, ETC.
+# --------------------------------------------------------
 
 
 def count_active_quests():
-    """Détermine le nombre de quêtes actives en comptant les fichiers .md dans le répertoire quests"""
+    """Détermine le nombre de quêtes actives via le topic 'dsqX'."""
     try:
-        repo = g.get_repo(f"{REPO_OWNER}/{REPO_NAME}")
-        quests_files = []
-
-        # Récupérer les fichiers .md dans le répertoire quests
-        try:
-            quests_dir_contents = repo.get_contents("quests")
-            for content in quests_dir_contents:
-                if content.name.endswith(".md"):
-                    quests_files.append(content)
-
-            # Retourner le nombre de fichiers .md trouvés
-            if quests_files:
-                return len(quests_files)
-        except Exception as e:
-            print(f"Erreur lors de l'accès au répertoire quests: {e}")
-
-        # Valeur par défaut en cas d'erreur ou si aucun fichier n'est trouvé
-        return 1
+        dsq_repos = g.search_repositories("topic:devsidequests")
+        quest_topics = set()
+        for repo in dsq_repos:
+            topics = repo.get_topics()
+            for topic in topics:
+                if topic.startswith("dsq") and topic != "devsidequests":
+                    quest_topics.add(topic)
+        return len(quest_topics) if quest_topics else 1
     except Exception as e:
         print(f"Erreur lors du comptage des quêtes actives: {e}")
-        return 1  # Valeur par défaut en cas d'erreur
-
-
-def get_completed_quests(fork_data):
-    """Détermine les quêtes complétées en analysant les dates de création des repos"""
-    completed_quests = []
-    quest_completion_times = {}  # Pour stocker les temps de complétion par quête
-
-    for user in fork_data:
-        for repo in user["dsq_repos"]:
-            # Vérifier si le repo a plus de 7 jours (considéré comme complété)
-            repo_obj = g.get_repo(f"{user['username']}/{repo['name']}")
-            creation_date = repo_obj.created_at
-            current_date = datetime.now()
-            days_difference = (current_date - creation_date).days
-
-            if days_difference >= 7:
-                # Extraire l'ID de la quête à partir des topics
-                quest_id = None
-                for topic in repo["topics"]:
-                    if topic.startswith("dsq") and topic != "devsidequests":
-                        quest_id = topic
-                        break
-
-                if quest_id:
-                    completed_quests.append(
-                        {
-                            "quest_id": quest_id,
-                            "repo_name": repo["name"],
-                            "repo_url": repo["url"],
-                            "user": user["username"],
-                            "completion_days": days_difference,
-                        }
-                    )
-
-                    # Ajouter à notre dictionnaire de temps de complétion
-                    if quest_id not in quest_completion_times:
-                        quest_completion_times[quest_id] = []
-                    quest_completion_times[quest_id].append(days_difference)
-
-    # Calculer le temps moyen de complétion pour chaque quête
-    average_completion_times = {}
-    for quest_id, times in quest_completion_times.items():
-        if times:
-            average_completion_times[quest_id] = sum(times) / len(times)
-
-    return completed_quests, average_completion_times
-
-
-def generate_community_stats(fork_data):
-    """Génère des statistiques détaillées sur la communauté DSQ"""
-    # Préparer les données
-    completion_data, avg_times = get_completed_quests(fork_data)
-
-    # Calculer les statistiques mensuelles de croissance
-    monthly_growth = calculate_monthly_growth(fork_data)
-
-    # Calculer les statistiques de langages
-    language_stats = calculate_language_stats(fork_data)
-
-    # Formatter les données pour l'affichage
-    stats = {
-        "monthly_growth": monthly_growth,
-        "language_stats": language_stats,
-        "avg_completion_times": avg_times,
-        "total_projects": len(completion_data),
-    }
-
-    return stats
-
-
-def calculate_monthly_growth(fork_data):
-    """Calcule la croissance mensuelle de la communauté"""
-    # Grouper les forks par mois
-    monthly_counts = {}
-
-    for user in fork_data:
-        fork_date = user["fork_date"]
-        month_key = fork_date.strftime("%Y-%m")
-
-        if month_key not in monthly_counts:
-            monthly_counts[month_key] = 0
-        monthly_counts[month_key] += 1
-
-    # Trier les mois chronologiquement
-    sorted_months = sorted(monthly_counts.keys())
-    monthly_growth = []
-
-    for month in sorted_months:
-        monthly_growth.append(
-            {
-                "month": month,
-                "count": monthly_counts[month],
-                "display_name": datetime.strptime(month, "%Y-%m").strftime("%b %Y"),
-            }
-        )
-
-    return monthly_growth
-
-
-def calculate_language_stats(fork_data):
-    """Calcule la distribution des langages dans la communauté"""
-    language_counts = {}
-
-    for user in fork_data:
-        lang = user["main_language"]
-        # Extraire seulement le nom du langage si un pourcentage est présent
-        if "%" in lang:
-            lang = lang.split()[0]
-
-        if lang not in language_counts:
-            language_counts[lang] = 0
-        language_counts[lang] += 1
-
-    # Trier par popularité
-    sorted_langs = sorted(language_counts.items(), key=lambda x: x[1], reverse=True)
-
-    # Calculer les pourcentages
-    total_users = len(fork_data)
-    language_stats = []
-
-    for lang, count in sorted_langs:
-        percentage = (count / total_users) * 100
-        language_stats.append(
-            {"language": lang, "count": count, "percentage": round(percentage, 1)}
-        )
-
-    return language_stats
+        return 1
 
 
 def count_completed_projects(fork_data):
-    """Compte le nombre total de projets DSQ complétés"""
+    """Compte le nombre total de projets DSQ (tous repos DSQ, terminés ou non)."""
     total = 0
     for user in fork_data:
         total += len(user["dsq_repos"])
     return total
 
 
+def calculate_monthly_growth(fork_data):
+    """Calcule la croissance mensuelle (groupement par YYYY-MM)."""
+    monthly_counts = {}
+    for user in fork_data:
+        # On re-convertit la date iso en datetime
+        dt = datetime.fromisoformat(user["fork_date"])
+        month_key = dt.strftime("%Y-%m")
+        monthly_counts[month_key] = monthly_counts.get(month_key, 0) + 1
+
+    sorted_months = sorted(monthly_counts.keys())
+    monthly_growth = []
+    for month in sorted_months:
+        dt_obj = datetime.strptime(month, "%Y-%m")
+        monthly_growth.append(
+            {
+                "month": month,
+                "count": monthly_counts[month],
+                "display_name": dt_obj.strftime("%b %Y"),
+            }
+        )
+    return monthly_growth
+
+
+def calculate_language_stats(fork_data):
+    """Classement des langages principaux dans la communauté."""
+    from collections import Counter
+
+    lang_counter = Counter()
+
+    for user in fork_data:
+        lang = user["main_language"]
+        # Si on a un pourcentage, on ne garde que le nom du langage
+        if "%" in lang:
+            lang = lang.split()[0]
+        lang_counter[lang] += 1
+
+    total_users = len(fork_data)
+    stats = []
+    for lang, count in lang_counter.most_common():
+        percentage = round((count / total_users) * 100, 1)
+        stats.append({"language": lang, "count": count, "percentage": percentage})
+    return stats
+
+
+def get_completed_quests(fork_data):
+    """
+    Retourne la liste des quêtes "terminées" (repos DSQ de plus de 7 jours)
+    et calcule le temps moyen de complétion.
+    """
+    completed_quests = []
+    quest_completion_times = {}
+
+    for user in fork_data:
+        username = user["username"]
+        for repo_info in user["dsq_repos"]:
+            repo_name = repo_info["name"]
+            # On essaye d'aller voir la date de création du repo
+            try:
+                repo_obj = g.get_repo(f"{username}/{repo_name}")
+                creation_date = repo_obj.created_at
+                days_diff = (datetime.now() - creation_date).days
+                if days_diff >= 7:
+                    # la quête est considérée comme "complétée"
+                    quest_id = None
+                    for t in repo_info["topics"]:
+                        if t.startswith("dsq") and t != "devsidequests":
+                            quest_id = t
+                            break
+                    if quest_id:
+                        completed_quests.append(
+                            {
+                                "quest_id": quest_id,
+                                "repo_name": repo_info["name"],
+                                "repo_url": repo_info["url"],
+                                "user": username,
+                                "completion_days": days_diff,
+                            }
+                        )
+                        if quest_id not in quest_completion_times:
+                            quest_completion_times[quest_id] = []
+                        quest_completion_times[quest_id].append(days_diff)
+            except:
+                pass  # repos privé ou autre cas
+
+    # On calcule la moyenne de complétion pour chaque quête
+    average_times = {}
+    for qid, times in quest_completion_times.items():
+        if times:
+            average_times[qid] = sum(times) / len(times)
+
+    return completed_quests, average_times
+
+
+def generate_community_stats(fork_data):
+    """
+    Construit un dict de stats (progression, langages, temps moyen...).
+    """
+    # Quêtes terminées et moyenne
+    completion_data, avg_times = get_completed_quests(fork_data)
+    monthly_growth = calculate_monthly_growth(fork_data)
+    language_stats = calculate_language_stats(fork_data)
+
+    stats = {
+        "monthly_growth": monthly_growth,
+        "language_stats": language_stats,
+        "avg_completion_times": avg_times,
+        "total_projects": len(completion_data),
+    }
+    return stats
+
+
+# --------------------------------------------------------
+# GÉNÉRATION DU MARKDOWN
+# --------------------------------------------------------
+
+
 def generate_markdown(fork_data):
-    """Génère le contenu markdown du fichier PARTICIPANTS.md"""
-    # Calcul des statistiques
+    """
+    Gère la construction de PARTICIPANTS.md (sans la "Galerie des Quêtes").
+    """
+    # Convertir la date iso en datetime pour trier
+    for user in fork_data:
+        if isinstance(user["fork_date"], str):
+            user["fork_date"] = datetime.fromisoformat(user["fork_date"])
+
+    # Tri final du plus récent au plus ancien
+    fork_data.sort(key=lambda x: x["fork_date"], reverse=True)
+
     participants_count = len(fork_data)
     projects_count = count_completed_projects(fork_data)
-    quests_count = count_active_quests()  # Utilise notre nouvelle fonction
+    quests_count = count_active_quests()
     newest_user = fork_data[0]["username"] if fork_data else "Aucun participant"
 
-    # Générer les statistiques avancées
+    # Stats avancées
     community_stats = generate_community_stats(fork_data)
+
+    date_now = datetime.now()
+    date_now_str = date_now.strftime("%d/%m/%Y")
+    date_hour_str = date_now.strftime("%d/%m/%Y à %H:%M")
 
     markdown = f"""# 🎮 Aventuriers des Dev Side Quests
 
 <div align="center">
   
-*Liste auto-générée le {datetime.now().strftime('%d/%m/%Y')} · Mise à jour quotidienne*
+*Liste auto-générée le {date_now_str} · Mise à jour quotidienne*
 
 </div>
 
@@ -433,13 +410,12 @@ Pour apparaître dans cette liste d'aventuriers :
 | 🧙‍♂️ Participants | 🗺️ Quêtes actives | 🏆 Projets complétés | 🔥 Dernier arrivé |
 |:----------------:|:---------------:|:--------------------:|:------------------:|
 | {participants_count} | {quests_count} | {projects_count} | {newest_user} |
-
 </div>
-
 """
 
-    # Ajouter les statistiques de progression de la communauté
-    if community_stats["monthly_growth"]:
+    # Progression mensuelle
+    monthly_data = community_stats["monthly_growth"]
+    if monthly_data:
         markdown += """
 ### 📈 Progression de la communauté
 
@@ -569,34 +545,6 @@ votre-projet-dsq/
 
     # Ajouter la section galerie des quêtes
     markdown += """
-## 🎭 Galerie des Quêtes Accomplies
-
-### DSQ #1 - Mini Weather Dashboard
-
-<div align="center">
-  <table>
-    <tr>
-      <td align="center">
-        <a href="https://github.com/RaphyStoll/miniWeather">
-          <img src="https://via.placeholder.com/250x150?text=Mini+Weather" /><br />
-          <sub><b>Python App par RaphyStoll</b></sub>
-        </a>
-      </td>
-      <td align="center">
-        <a href="https://github.com/user2/meteo-vue">
-          <img src="https://via.placeholder.com/250x150?text=Meteo+Vue" /><br />
-          <sub><b>Vue.js App par user2</b></sub>
-        </a>
-      </td>
-      <td align="center">
-        <a href="https://github.com/user3/react-weather">
-          <img src="https://via.placeholder.com/250x150?text=React+Weather" /><br />
-          <sub><b>React App par user3</b></sub>
-        </a>
-      </td>
-    </tr>
-  </table>
-</div>
 
 ## 🔍 Explorer plus de projets
 
