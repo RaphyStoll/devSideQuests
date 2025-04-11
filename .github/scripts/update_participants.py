@@ -543,15 +543,15 @@ votre-projet-dsq/
     # Ajouter la section footer
     markdown += """
     
-    ---
-    
-    <div align="center">
-      
-    *Cette page est générée automatiquement par un workflow GitHub Actions.*  
-    *Dernière mise à jour : {datetime.now().strftime('%d/%m/%Y à %H:%M')}*
-    
-    </div>
-    """
+---
+
+<div align="center">
+
+*Cette page est générée automatiquement par un workflow GitHub Actions.*  
+*Dernière mise à jour : {datetime.now().strftime('%d/%m/%Y à %H:%M')}*
+
+</div>
+"""
     return markdown
 
 
