@@ -592,7 +592,7 @@ def main():
 
     print("update cache ...")
     save_cache(cache_data)
-    print("Mise à jour terminée avec succès!")
+    print("Mise à jour terminée. PARTICIPANTS.md et cache.json sont à jour.")
 
     # Afficher un récapitulatif
     print("\nRécapitulatif:")
