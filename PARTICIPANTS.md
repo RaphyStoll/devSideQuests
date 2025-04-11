@@ -27,7 +27,7 @@ Pour apparaître dans cette liste d'aventuriers :
   
 | 🧙‍♂️ Participants | 🗺️ Quêtes actives | 🏆 Projets complétés | 🔥 Dernier arrivé |
 |:----------------:|:---------------:|:--------------------:|:------------------:|
-| 1 | 1 | 0 | RaphyStoll |
+| 1 | 1 | 1 | RaphyStoll |
 </div>
 
 ### 📈 Progression de la communauté
@@ -73,7 +73,7 @@ votre-projet-dsq/
 
 |                                                     Avatar                                                      |                   Aventurier                    | Classe principale |                     Repos DSQ                     | Date d'arrivée |
 | :-------------------------------------------------------------------------------------------------------------: | :---------------------------------------------: | :---------------: | :-----------------------------------------------: | :------------: |
-| <img src="https://avatars.githubusercontent.com/u/136492536?v=4" width="60" height="60" style="border-radius:50%" /> | [RaphyStoll](https://github.com/RaphyStoll) | C 73% |  | 13/06/2023 |
+| <img src="https://avatars.githubusercontent.com/u/136492536?v=4" width="60" height="60" style="border-radius:50%" /> | [RaphyStoll](https://github.com/RaphyStoll) | C 73% | [🔗](https://github.com/RaphyStoll/devSideQuests) | 13/06/2023 |
 
 ## 🌍 Guilde des Aventuriers (Tous les participants)
 
