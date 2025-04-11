@@ -21,7 +21,15 @@ REPO_OWNER = "RaphyStoll"
 REPO_NAME = "devSideQuests"
 
 # Initialisation de l'API GitHub avec le token fourni par les Actions GitHub
-g = Github(os.environ.get("TOKEN"))
+token = os.environ.get("GITHUB_TOKEN")  # ou TOKEN, selon ton choix
+if not token:
+    print("ERREUR: Variable d'environnement TOKEN non définie ou vide")
+    print(
+        "Assurez-vous que le token est correctement configuré dans le workflow GitHub Actions"
+    )
+    sys.exit(1)
+
+g = Github(token)
 
 
 def determine_main_language(user_login):

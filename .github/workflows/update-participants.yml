@@ -9,6 +9,9 @@ on:
 jobs:
   update-participants:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Donne les permissions d'écriture au repository
+      
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,7 +28,8 @@ jobs:
           
       - name: Update participants list
         env:
-          TOKEN: ${{ secrets.TOKEN }}
+          # Utiliser github.token (token intégré de GitHub Actions)
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           python .github/scripts/update_participants.py
           
