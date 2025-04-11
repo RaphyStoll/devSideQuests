@@ -25,7 +25,7 @@ CACHE_FILE = "cache.json"
 # Tableau de noms d'utilisateur à ajouter manuellement
 ADDITIONAL_USERNAMES = [
     "RaphyStoll",
-    # "AutreAventurier42",
+    # "AutreAventurier",
 ]
 
 # On récupère le token GitHub
@@ -144,7 +144,8 @@ def determine_main_language(user_login):
         from collections import Counter
 
         languages = []
-        six_months_ago = datetime.now() - timedelta(days=180)
+        repo_tz = repo.updated_at.tzinfo
+        six_months_ago = datetime.now(tz=repo_tz) - timedelta(days=180)
 
         for repo in repos:
             if repo.language:
@@ -577,7 +578,7 @@ def main():
     print(f"Nombre de participants trouvés: {len(fork_data)}")
     additional_data = get_additional_participants_data(ADDITIONAL_USERNAMES, cache_data)
     print(f"Participants additionnels : {len(additional_data)}")
-    combined = forks_data + additional_data
+    combined = fork_data + additional_data
     print(f"Nombre total de participants après fusion : {len(combined)}")
 
     print("Génération des statistiques avancées...")
