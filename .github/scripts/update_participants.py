@@ -103,24 +103,28 @@ def fetch_user_data(user_login, fork_date=None):
 
 
 def get_or_cache_user(user_login, cache_data, fork_date=None):
-    """
-    Vérifie si user_login est dans le cache_data.
-    - S'il y est, on retourne ces infos (en remplaçant éventuellement la date de fork).
-    - Sinon, on va les chercher avec fetch_user_data() et on les stocke dans le cache.
-    """
-    # Si déjà en cache, on le récupère
     if user_login in cache_data:
         user_info = cache_data[user_login]
-        # On met à jour la date si on en reçoit une (ex. pour un fork)
-        if fork_date is not None:
+        # user_info["fork_date"] est une string iso
+        if fork_date:
+            # si on a un "fork_date" plus récent, on écrase
             user_info["fork_date"] = fork_date.isoformat()
-        return user_info
     else:
-        # Sinon, on fetch via l'API GitHub
+        # On fetch
         user_info = fetch_user_data(user_login, fork_date)
-        # On le stocke en cache
         cache_data[user_login] = user_info
-        return user_info
+
+    # Convertir en datetime directement
+    # => dans le dictionnaire Python, on garde un champ datetime
+    # => dans le cache JSON, on garde la chaîne iso
+    fd_str = user_info["fork_date"]
+    if isinstance(fd_str, str):
+        user_info["fork_date_dt"] = datetime.fromisoformat(fd_str)
+    else:
+        # si c’est déjà un datetime (peu probable), on le garde
+        user_info["fork_date_dt"] = fd_str
+
+    return user_info
 
 
 # --------------------------------------------------------
@@ -367,7 +371,7 @@ def generate_markdown(fork_data):
             user["fork_date"] = datetime.fromisoformat(user["fork_date"])
 
     # Tri final du plus récent au plus ancien
-    fork_data.sort(key=lambda x: x["fork_date"], reverse=True)
+    fork_data.sort(key=lambda x: x["fork_date_dt"], reverse=True)
 
     participants_count = len(fork_data)
     projects_count = count_completed_projects(fork_data)
@@ -503,7 +507,7 @@ votre-projet-dsq/
 
     # Ajouter les 5 derniers arrivés
     for user in fork_data[:5]:
-        date_formatted = user["fork_date"].strftime("%d/%m/%Y")
+        date_formatted = user["fork_date_dt"].strftime("%d/%m/%Y")
         repo_link = ""
         if user["dsq_repos"]:
             main_repo = user["dsq_repos"][0]
