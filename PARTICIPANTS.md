@@ -27,10 +27,20 @@ Pour apparaître dans cette liste d'aventuriers :
   
 | 🧙‍♂️ Participants | 🗺️ Quêtes actives | 🏆 Projets complétés | 🔥 Dernier arrivé |
 |:----------------:|:---------------:|:--------------------:|:------------------:|
-| 0 | 1 | 0 | Aucun participant |
-
+| 1 | 1 | 0 | RaphyStoll |
 </div>
 
+### 📈 Progression de la communauté
+
+```
+Jun 2023: ██████████████████████████████ (1 nouveaux)
+```
+
+### 💻 Langages préférés de la communauté
+
+```
+C         : ██████████████████████████████ 100.0%
+```
 
 ## 🔍 Guides de la communauté
 
@@ -63,58 +73,30 @@ votre-projet-dsq/
 
 |                                                     Avatar                                                      |                   Aventurier                    | Classe principale |                     Repos DSQ                     | Date d'arrivée |
 | :-------------------------------------------------------------------------------------------------------------: | :---------------------------------------------: | :---------------: | :-----------------------------------------------: | :------------: |
+| <img src="https://avatars.githubusercontent.com/u/136492536?v=4" width="60" height="60" style="border-radius:50%" /> | [RaphyStoll](https://github.com/RaphyStoll) | C 73% |  | 13/06/2023 |
 
 ## 🌍 Guilde des Aventuriers (Tous les participants)
 
 <div align="center">
 <table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/RaphyStoll">
+        <img src="https://avatars.githubusercontent.com/u/136492536?v=4" width="70" /><br />
+        <sub><b>RaphyStoll</b></sub>
+      </a>
+    </td>
+  </tr>
 </table>
 </div>
 
-## 🎭 Galerie des Quêtes Accomplies
-
-### DSQ #1 - Mini Weather Dashboard
-
-<div align="center">
-  <table>
-    <tr>
-      <td align="center">
-        <a href="https://github.com/RaphyStoll/miniWeather">
-          <img src="https://via.placeholder.com/250x150?text=Mini+Weather" /><br />
-          <sub><b>Python App par RaphyStoll</b></sub>
-        </a>
-      </td>
-      <td align="center">
-        <a href="https://github.com/user2/meteo-vue">
-          <img src="https://via.placeholder.com/250x150?text=Meteo+Vue" /><br />
-          <sub><b>Vue.js App par user2</b></sub>
-        </a>
-      </td>
-      <td align="center">
-        <a href="https://github.com/user3/react-weather">
-          <img src="https://via.placeholder.com/250x150?text=React+Weather" /><br />
-          <sub><b>React App par user3</b></sub>
-        </a>
-      </td>
-    </tr>
-  </table>
-</div>
-
-## 🔍 Explorer plus de projets
-
-Découvrez les projets DSQ en explorant ces GitHub Topics :
-
-<div align="center">
-  
-[🌐 Tous les projets DSQ](https://github.com/topics/devsidequests)
-
-</div>
-
----
-
-<div align="center">
-  
-*Cette page est générée automatiquement par un workflow GitHub Actions.*  
-*Dernière mise à jour : {datetime.now().strftime('%d/%m/%Y à %H:%M')}*
-
-</div>
+    
+    ---
+    
+    <div align="center">
+      
+    *Cette page est générée automatiquement par un workflow GitHub Actions.*  
+    *Dernière mise à jour : {datetime.now().strftime('%d/%m/%Y à %H:%M')}*
+    
+    </div>
+    
