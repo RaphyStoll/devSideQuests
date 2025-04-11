@@ -17,11 +17,11 @@ from github import Github
 from dateutil import parser
 
 # Configuration
-REPO_OWNER = "ton-username"  # À remplacer par ton username GitHub
-REPO_NAME = "dsq"  # À remplacer par le nom de ton repo
+REPO_OWNER = "RaphyStoll"
+REPO_NAME = "devSideQuests"
 
 # Initialisation de l'API GitHub avec le token fourni par les Actions GitHub
-g = Github(os.environ.get("GITHUB_TOKEN"))
+g = Github(os.environ.get("TOKEN"))
 
 
 def determine_main_language(user_login):
