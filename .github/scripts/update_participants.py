@@ -24,7 +24,7 @@ CACHE_FILE = "cache.json"
 
 # Tableau de noms d'utilisateur à ajouter manuellement
 ADDITIONAL_USERNAMES = [
-    "MonSuperUser",
+    "RaphyStoll",
     # "AutreAventurier42",
 ]
 
