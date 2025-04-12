@@ -10,6 +10,7 @@ import os
 import sys
 import json
 from datetime import datetime, timedelta
+from datetime import timezone
 from github import Github
 
 # --------------------------------------------------------
@@ -44,6 +45,9 @@ def load_cache():
     """Charge le cache depuis le fichier CACHE_FILE,
     s'il n'existe pas, le crée et renvoie un dict vide."""
     if not os.path.exists(CACHE_FILE):
+        print(
+            f"[DEBUG] Cache file '{CACHE_FILE}' not found. Creating it now in {os.getcwd()}."
+        )
         # On crée un nouveau fichier de cache vide
         with open(CACHE_FILE, "w", encoding="utf-8") as f:
             f.write("{}")  # on met simplement un JSON vide
@@ -51,12 +55,19 @@ def load_cache():
 
     # Sinon, on lit son contenu
     with open(CACHE_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+        data = json.load(f)
+    print(
+        f"[DEBUG] Cache file '{CACHE_FILE}' loaded successfully from {os.path.join(os.getcwd(), CACHE_FILE)}."
+    )
+    return data
 
 
 def save_cache(cache_data):
     """Sauvegarde le cache dans le fichier CACHE_FILE."""
     with open(CACHE_FILE, "w", encoding="utf-8") as f:
+        print(
+            f"[DEBUG] Saving cache file '{CACHE_FILE}' to {os.path.join(os.getcwd(), CACHE_FILE)}."
+        )
         json.dump(cache_data, f, ensure_ascii=False, indent=2)
 
 
@@ -299,7 +310,11 @@ def get_completed_quests(fork_data):
             try:
                 repo_obj = g.get_repo(f"{username}/{repo_name}")
                 creation_date = repo_obj.created_at
-                days_diff = (datetime.now() - creation_date).days
+                creation_tz = (
+                    creation_date.tzinfo if creation_date.tzinfo else timezone.utc
+                )
+                now_aware = datetime.now(creation_tz)
+                days_diff = (now_aware - creation_date).days
                 if days_diff >= 7:
                     # la quête est considérée comme "complétée"
                     quest_id = None
@@ -541,19 +556,15 @@ votre-projet-dsq/
         markdown += f"\n_Et plus de {participants_count - 30} autres aventuriers..._\n"
 
     # Ajouter la section footer
-    markdown += """
-    
+    markdown += f"""
 ---
-
 <div align="center">
 
 *Cette page est générée automatiquement par un workflow GitHub Actions.*  
 *Dernière mise à jour : {datetime.now().strftime('%d/%m/%Y à %H:%M')}*
 
 </div>
-""".format(
-        date_heure=datetime.now().strftime("%d/%m/%Y à %H:%M")
-    )
+"""
     return markdown
 
 
