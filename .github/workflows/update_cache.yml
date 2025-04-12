@@ -1,0 +1,36 @@
+name: Update Cache
+
+on:
+  schedule:
+    - cron: '0 2 * * 2'  # par ex., tous les mardis à 02:00
+  workflow_dispatch:
+
+jobs:
+  refresh-cache:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install PyGithub
+
+      - name: Refresh Cache
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python .github/scripts/update-user-cache.py
+    
+      - name: Commit cache
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add cache.json
+          git commit -m "Update cache.json from workflow" || echo "No changes to commit"
+          git push
