@@ -67,7 +67,8 @@ outils pratiques :
 
 ### 📁 Dossier `templates/`
 
-Un modèle de structure de projet est disponible dans le dossier [`templates/`](./templates/) :
+Un modèle de structure de projet est disponible dans le dossier
+[`templates/`](https://github.com/RaphyStoll/devSideQuests/tree/main/Template) :
 
 ```
 your-dsq-project/
