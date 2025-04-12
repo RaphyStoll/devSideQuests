@@ -80,11 +80,6 @@ your-dsq-project/
 
 ➕ Libre à vous d’adapter cette structure selon vos besoins.
 
-### 🛠 Script d'initialisation (à venir)
-
-Un script simple permettra bientôt de générer automatiquement la structure d'une quête DSQ. Restez à
-l'écoute !
-
 ### ✅ Bonnes pratiques
 
 - Pensez à indiquer dans votre `README.md` : la quête choisie, le langage utilisé, les objectifs
