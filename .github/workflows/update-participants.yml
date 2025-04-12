@@ -40,7 +40,7 @@ jobs:
           
           # Vérifier s'il y a des modifications
           if [[ $(git status --porcelain PARTICIPANTS.md) ]]; then
-            git add PARTICIPANTS.md
+            git add PARTICIPANTS.md cache.json
             current_date=$(date +"%d/%m/%Y à %H:%M")
             git commit -m "🤖 Mise à jour automatique de la liste des participants - $current_date"
             git push
