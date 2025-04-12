@@ -55,10 +55,10 @@ de se challenger soi-même et d'apprendre à mieux se connaître en tant que dé
 
 ## 📜 Quêtes Disponibles
 
-| Quête                                                            | Difficulté                    | Description                    |
-| ---------------------------------------------------------------- | ----------------------------- | ------------------------------ |
-| [DSQ #1 - Mini Weather Dashboard](./quests/dsq1-mini-weather.md) | ![debutant](img/debutant.svg) | App météo graphique en 3 jours |
-| [DSQ #2 - ???](./quests/dsq2-random-idea.md)                     | À venir                       | À venir                        |
+| Quête                                                                                                                | Difficulté                    | Description                    |
+| -------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ------------------------------ |
+| [DSQ #1 - Mini Weather Dashboard](https://github.com/RaphyStoll/devSideQuests/blob/main/quests/dsq1_mini_weather.md) | ![debutant](img/debutant.svg) | App météo graphique en 3 jours |
+| [DSQ #2 - ???](./quests/dsq2-random-idea.md)                                                                         | À venir                       | À venir                        |
 
 ## 🧰 Bien démarrer avec les DSQ
 
