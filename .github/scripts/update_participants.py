@@ -58,6 +58,7 @@ def save_cache(cache_data):
     """Sauvegarde le cache dans le fichier CACHE_FILE."""
     with open(CACHE_FILE, "w", encoding="utf-8") as f:
         json.dump(cache_data, f, ensure_ascii=False, indent=2)
+    print("Chemin d'exécution :", os.getcwd())
 
 
 # --------------------------------------------------------
@@ -551,7 +552,9 @@ votre-projet-dsq/
 *Dernière mise à jour : {datetime.now().strftime('%d/%m/%Y à %H:%M')}*
 
 </div>
-"""
+""".format(
+        date_heure=datetime.now().strftime("%d/%m/%Y à %H:%M")
+    )
     return markdown
 
 
