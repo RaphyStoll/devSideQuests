@@ -73,7 +73,7 @@ votre-projet-dsq/
 
 |                                                     Avatar                                                      |                   Aventurier                    | Classe principale |                     Repos DSQ                     | Date d'arrivée |
 | :-------------------------------------------------------------------------------------------------------------: | :---------------------------------------------: | :---------------: | :-----------------------------------------------: | :------------: |
-| <img src="https://avatars.githubusercontent.com/u/136492536?v=4" width="60" height="60" style="border-radius:50%" /> | [RaphyStoll](https://github.com/RaphyStoll) | C 38% | [🔗](https://github.com/RaphyStoll/devSideQuests) | 13/06/2023 |
+| <img src="https://avatars.githubusercontent.com/u/136492536?v=4" width="60" height="60" style="border-radius:50%" /> | [RaphyStoll](https://github.com/RaphyStoll) | C 36% | [🔗](https://github.com/RaphyStoll/devSideQuests) | 13/06/2023 |
 
 ## 🌍 Guilde des Aventuriers (Tous les participants)
 
@@ -94,6 +94,6 @@ votre-projet-dsq/
 <div align="center">
 
 *Cette page est générée automatiquement par un workflow GitHub Actions.*  
-*Dernière mise à jour : 07/04/2026 à 00:25*
+*Dernière mise à jour : 07/04/2026 à 12:19*
 
 </div>
