@@ -2,7 +2,7 @@
 
 <div align="center">
   
-*Liste auto-générée le 08/09/2026 · Mise à jour quotidienne*
+*Liste auto-générée le 09/09/2026 · Mise à jour quotidienne*
 
 </div>
 
@@ -94,6 +94,6 @@ votre-projet-dsq/
 <div align="center">
 
 *Cette page est générée automatiquement par un workflow GitHub Actions.*  
-*Dernière mise à jour : 08/09/2026 à 15:52*
+*Dernière mise à jour : 09/09/2026 à 02:44*
 
 </div>
